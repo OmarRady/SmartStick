@@ -64,6 +64,7 @@ def capture():
     #camera.stop_preview()
     
 def localize_objects(path):
+    def capture()
     from google.cloud import vision
     client = vision.ImageAnnotatorClient()
 
@@ -90,6 +91,10 @@ if __name__ == '__main__':
             dist = distance()
             print ("Measured Distance = %.1f cm" % dist)
             time.sleep(1)
+            if dist >= 100 
+                break
+            localize_objects(path)
+                continue
  
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:
