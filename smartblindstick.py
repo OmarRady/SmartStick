@@ -6,8 +6,6 @@ from time import sleep
 import os
 import argparse
 from os import getcwd ; print(getcwd())
-#from oauth2client.client import GoogleCredentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apikey.json"
 #GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
 
@@ -18,7 +16,6 @@ GPIO_ECHO = 24
 #set GPIO direction (IN / OUT)
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_ECHO, GPIO.IN)
-
 
 
 def distance():
@@ -40,7 +37,7 @@ def distance():
     while GPIO.input(GPIO_ECHO) == 1:
         StopTime = time.time()
 
- 
+
     # time difference between start and arrival
     TimeElapsed = StopTime - StartTime
     # multiply with the sonic speed (34300 cm/s)
@@ -51,7 +48,7 @@ def distance():
 
 def capture():
     def remove_oldimg(self, file_path, img_name):
-        file_path = '/home/pi/gcloud/'
+        file_path = '/home/pi/smartstick/'
         img_name = 'scene_image.jpg'
 
 
@@ -60,32 +57,20 @@ def capture():
         if os.path.exists(path + '/' + img_name) is false:
         # file did not exists
             return True
-    camera = PiCamera()
-    camera.start_preview()
-    sleep(5)
-    camera.capture('/home/pi/gcloud/scene_image.jpg')
-    #camera.stop()
+    camera = PiCamera(resolution=(1280, 720), framerate=30)
+    # Set ISO to the desired value
+    camera.iso = 100
+    # Wait for the automatic gain control to settle
+    sleep(2)
+    # Now fix the values
+    camera.shutter_speed = camera.exposure_speed
+    camera.exposure_mode = 'off'
+    g = camera.awb_gains
+    camera.awb_mode = 'off'
+    camera.awb_gains = g
+    camera.capture('/home/pi/smartstick/scene_image.jpg')
     camera.stop_preview()
-
-def localize_objects(path):
-    from google.cloud import vision
-    client = vision.ImageAnnotatorClient()
-
-    with open(path, 'rb') as image_file:
-        content = image_file.read()
-    image = vision.types.Image(content=content)
-    objects = client.object_localization(image=image).localized_object_annotations
-    #file = open('detection_output', "w")
-    print('Number of objects found: {}'.format(len(objects)))
-    for object_ in objects:
-        print('\n{} (confidence: {})'.format(object_.name, object_.score))
-        #file.write(str(a))
-        print('Normalized bounding polygon vertices: ')
-        #file.write(str(b))
-for vertex in object_.bounding_poly.normalized_vertices:
-            print(' - ({}, {})'.format(vertex.x, vertex.y))
-                             #file.write(str(c))
-#file.close()
+    camera.close()
 
 
 if __name__ == '__main__':
@@ -97,7 +82,7 @@ if __name__ == '__main__':
             if dist <= 100:
 
                capture()
-               localize_objects('scene_image.jpg')
+
             continue
 
         # Reset by pressing CTRL + C
