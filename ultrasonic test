@@ -1,0 +1,55 @@
+import os
+from os import getcwd;
+import time
+from time import sleep
+import RPi.GPIO as GPIO
+
+
+class HC_SRO4(object):
+    global objs, trigger  # registrar
+    objs = []
+
+    def __init__(self, name, GPIO_TRIGGER , GPIO_ECHO, switch, trigger):
+        self.name = name
+        self.GPIO_TRIGGER = GPIO_TRIGGER
+        self.GPIO_ECHO = GPIO_ECHO
+        self.switch = switch
+        self.trigger = trigger 
+
+    def clean_up(self):
+        GPIO.cleanup()
+
+
+
+    # setting up the sensor pins, signals, and communication
+    @classmethod
+    def user_inputs(self):
+        while 1:
+                try:
+                        name = input("Please enter your sensor convention:")
+                        GPIO_TRIGGER = int(input("Please enter your sensor GPIO Trigger pin number:"))
+                        GPIO_ECHO = int(input("Please enter your sensor GPIO Echo pin number:"))
+                        switch = bool(input("Please turn on your sensor:"))
+                        trigger = bool(0)
+                        return self(name, GPIO_TRIGGER , GPIO_ECHO, switch, trigger)
+                except:
+                        print('Invalid input!')
+                       # continue
+
+
+    def setup(self):
+
+        #GPIO Mode (BOARD / BCM)
+        GPIO.setmode(GPIO.BCM)
+        #set GPIO direction (IN / OUT)
+        GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
+        GPIO.setup(GPIO_ECHO, GPIO.IN)
+        # register the new class obj
+        i = 0
+        for i in range(10):
+            objs.append(HC_SRO4(i))
+        #assign the pins setup as the function's output
+        print("Setup done")
+
+
+
