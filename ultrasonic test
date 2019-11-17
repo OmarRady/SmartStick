@@ -1,55 +1,128 @@
 import os
-from os import getcwd;
+from threading import Thread
+from os import getcwd
 import time
 from time import sleep
 import RPi.GPIO as GPIO
 
 
 class HC_SRO4(object):
-    global objs, trigger  # registrar
-    objs = []
+ global objs  # registrar
+ objs = []
 
-    def __init__(self, name, GPIO_TRIGGER , GPIO_ECHO, switch, trigger):
-        self.name = name
-        self.GPIO_TRIGGER = GPIO_TRIGGER
-        self.GPIO_ECHO = GPIO_ECHO
-        self.switch = switch
-        self.trigger = trigger 
-
-    def clean_up(self):
-        GPIO.cleanup()
-
-
-
-    # setting up the sensor pins, signals, and communication
-    @classmethod
-    def user_inputs(self):
-        while 1:
-                try:
-                        name = input("Please enter your sensor convention:")
-                        GPIO_TRIGGER = int(input("Please enter your sensor GPIO Trigger pin number:"))
-                        GPIO_ECHO = int(input("Please enter your sensor GPIO Echo pin number:"))
-                        switch = bool(input("Please turn on your sensor:"))
-                        trigger = bool(0)
-                        return self(name, GPIO_TRIGGER , GPIO_ECHO, switch, trigger)
-                except:
-                        print('Invalid input!')
-                       # continue
-
-
-    def setup(self):
-
-        #GPIO Mode (BOARD / BCM)
-        GPIO.setmode(GPIO.BCM)
-        #set GPIO direction (IN / OUT)
-        GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
-        GPIO.setup(GPIO_ECHO, GPIO.IN)
-        # register the new class obj
-        i = 0
-        for i in range(10):
-            objs.append(HC_SRO4(i))
-        #assign the pins setup as the function's output
-        print("Setup done")
+ def __init__(self, name , GPIO_TRIGGER , GPIO_ECHO, trigger = None ):
+     self.name = name
+     self.GPIO_TRIGGER = GPIO_TRIGGER
+     self.GPIO_ECHO = GPIO_ECHO
+     self.pins = (GPIO_TRIGGER,GPIO_ECHO)
+     self.trigger = trigger
+ def clean_up(self):
+     GPIO.cleanup()
 
 
 
+ # setting up the sensor pins, signals, and communication
+ @classmethod
+ def user_inputs(cls):
+ 
+     name = str(raw_input("Please enter your sensor convention:"))
+     
+     GPIO_TRIGGER = int(raw_input("Please enter your sensor GPIO Trigger pin number:"))
+     
+     GPIO_ECHO = int(raw_input("Please enter your sensor GPIO Echo pin number:"))
+     
+     return cls(name, GPIO_TRIGGER , GPIO_ECHO)
+    	
+
+
+
+ def setup(self):
+     GPIO_TRIGGER = self.pins[0]
+     GPIO_ECHO = self.pins[1]
+     #GPIO Mode (BOARD / BCM)
+     GPIO.setmode(GPIO.BCM)
+     #set GPIO direction (IN / OUT)
+     GPIO.setup(self.GPIO_TRIGGER, GPIO.OUT)
+     GPIO.setup(self.GPIO_ECHO, GPIO.IN)
+     # register the new class obj
+     i = 0
+     for i in range(10):
+         objs.append(HC_SRO4(self.name, self.GPIO_TRIGGER, self.GPIO_ECHO, self.trigger ))
+     #assign the pins setup as the function's output
+     print("Setup done")
+     
+
+
+ # declare the scan loop setup
+ def scan(self):
+    GPIO_TRIGGER = self.pins[0]
+    GPIO_ECHO = self.pins[1]
+    # set Trigger to HIGH
+    GPIO.output(self.GPIO_TRIGGER, True)
+    # set Trigger after 0.01ms to LOW
+    time.sleep(0.00001)
+    GPIO.output(self.GPIO_TRIGGER, False)
+
+    # initial time
+    StartTime = time.time()
+    StopTime = time.time()
+
+    #save StartTime
+    while GPIO.input(self.GPIO_ECHO) == 0:
+        StartTime = time.time()
+
+    #save time of arrival
+    while GPIO.input(self.GPIO_ECHO) == 1:
+        StopTime = time.time()
+
+    #time difference between start and arrival
+    TimeElapsed = float(StopTime - StartTime)
+
+    #multiply with the sonic speed (34300 cm/s)
+    #and divide by 2, because there and back
+    distance = float((TimeElapsed * 34300) / 2)
+
+    return distance
+
+ def detect(self):
+     i = int(0)   # indicator
+     for obj in objs:  # loop over the class objects
+         if obj.trigger:
+             i += 1
+     if i > 1:  # check if any other ultrasonic objects triggered
+         print('dual detection') #speaker.dual_US_mss()
+     else:
+         print('single detection') #speaker.single_US_mss()
+
+     self.trigger = 0
+ # starting the sensor loop / turning the sensor on
+ def run(self):
+    self.setup()
+    try:
+ 	      while True:
+                distance = float(self.scan())
+                print(self.name)
+                print("Measured Distance = %.1f cm" % distance)
+                time.sleep(1)
+                if distance <= 100:
+                  self.trigger = 1   
+                  self.detect()
+                  continue
+    	 # Reset by pressing CTRL + C
+    except KeyboardInterrupt:
+             print("Measurement stopped by User")
+
+
+if __name__ == "__main__":
+  GPIO.cleanup()
+  us1 = HC_SRO4.user_inputs()
+  us2 = HC_SRO4.user_inputs()
+  t1 = Thread(us1.run())
+  t2 = Thread(us2.run())
+  t1.start()
+  t2.start()
+  
+
+
+			
+			
