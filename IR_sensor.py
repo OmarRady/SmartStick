@@ -1,52 +1,43 @@
-from sensors import sensor
+import setup
 from ADC import MCP3008
-class ir_sensor(sensor , MCP3008):
+import speaker
 
-    def inputs(self):
-        self.set_name()
-        self.set_GPIO_TRIGGER()
-        self.set_GPIO_ECHO()
-        self.set_switch()
-
+class sharp_2Y0A02(setup.hardsetup, MCP3008):
 
     # setting up the sensor pins, signals, and communication
-
     def setup(self):
-
-        # GPIO Mode (BOARD / BCM)
-        GPIO.setmode(GPIO.BOARD)
-
-        #set GPIO Pins
-        try:
-            GPIO_TRIGGER = self.get_GPIO_TRIGGER()  # 18
-            GPIO_ECHO = self.get_GPIO_ECHO()  # 24
-        except:
-            print("Infrared Sensor instance misses the GPIO pins setup parameters")
-        #set GPIO direction (IN / OUT)
-        GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
-        GPIO.setup(GPIO_ECHO, GPIO.IN)
-
-        bus = smbus.SMBus(1)  # RPi revision 2 (0 for revision 1)
-        i2c_address = 0x48
-        # u = mx + b, x = 1/distance
-        m = 19.8
-        b = 0.228
+        self.set_name()
+        name = str(self.get_name())
+        self.set_switch()
+        switch = bool(self.get_switch())
+        self.get_channels_used()
+        self.get_SPI_bus()
+        self.get_SPI_device()
+        self.get_SPI_channel()
 
     # declare the scan loop setup
     def scan(self):
 
-        data = bus.read_byte_data(i2c_address, 0)  # use CH0
-        u = data / 255 * 5
-        distance = int(m / (u - b))
+        data = float(self.MCP3008.read()) # use CH0
+        voltage = float((data/1023.0)*3.3)
+        distance = float(16.2537 * voltage**4 - 129.893 * voltage**3 + 382.268 * voltage**2 - 512.611 * voltage + 301.439)
         time.sleep(0.1)
 
         return distance
 
-    def detect(self):
+    def detect(self, distance):
         self.set_trigger()
-
-
+        trigger = bool(self.get_trigger())
+        i = int(0)
+        for obj in setup.objs:  # loop over the class objects
+            if obj.trigger:
+                i += 1
+        if i >= 1:  # check if any other ultrasonic objects triggered
+            pass
+        else:
+            speaker.IR_mss()
         self.reset_trigger()
+        trigger = bool(self.get_trigger())
 
     # starting the sensor loop / turning the sensor on
     def run(self):
@@ -57,12 +48,8 @@ class ir_sensor(sensor , MCP3008):
                 while True:
                      distance = self.scan()
                      print("Measured Distance = %.1f cm" % distance)
-                     time.sleep(1)
                      if distance <= 100:
-
-                         print("detected")
-                         #self.trigger = True
-                         #self.detect()
+                        self.detect(distance)
                      continue
                  # Reset by pressing CTRL + C
              except KeyboardInterrupt:
